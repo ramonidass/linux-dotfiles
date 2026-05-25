@@ -1,0 +1,16 @@
+
+# Editor temp / backup files
+*.swp
+*.swo
+*~
+\#*\#
+.\#*
+
+*.pem
+*.key
+*.token
+*.secret
+*.env
+*.cred
+
+
