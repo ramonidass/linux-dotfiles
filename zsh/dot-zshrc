@@ -1,0 +1,227 @@
+
+if command -v fastfetch &> /dev/null && [[ $- == *i* ]]; then
+    alias fastfetch='clear && command fastfetch'
+    command fastfetch
+fi
+
+# ==================================================
+# P10K INSTANT PROMPT
+# ==================================================
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+sed -i 's/typeset -g POWERLEVEL9K_INSTANT_PROMPT=.*/typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet/g' ~/.p10k.zsh
+
+
+# =================================================
+# ENVIRONMENT VARIABLES & PATHS
+# ================================================
+export EDITOR=nvim
+export VISUAL=nvim
+export SUDO_EDITOR=nvim
+export GOPATH="$HOME/go"
+export XDG_CONFIG_HOME="$HOME/.config"
+# To export agent socket to other GUI apps
+export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+
+# Homebrew Initialization (Handles both Apple Silicon and Intel Macs safely)
+# if [[ -x "/opt/homebrew/bin/brew" ]]; then
+#     eval "$(/opt/homebrew/bin/brew shellenv)"
+# elif [[ -x "/usr/local/bin/brew" ]]; then
+#     eval "$(/usr/local/bin/brew shellenv)"
+# fi
+
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$GOPATH/bin:$PATH"
+
+export CPATH="/opt/homebrew/opt/libpq/include:$CPATH"
+export LIBRARY_PATH="/opt/homebrew/opt/libpq/lib:$LIBRARY_PATH"
+export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+
+if command -v bat &> /dev/null; then export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+    export PAGER=bat
+fi
+
+# Load Secrets securely
+if [[ -f ~/.secrets.zsh ]]; then
+    source ~/.secrets.zsh
+fi
+
+# =================================
+# ZINIT PLUGIN MANAGER
+# ================================
+ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
+if [ ! -d "$ZINIT_HOME" ]; then
+   mkdir -p "$(dirname $ZINIT_HOME)"
+   git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
+fi
+source "${ZINIT_HOME}/zinit.zsh"
+
+# Theme
+zinit ice depth=1; zinit light romkatv/powerlevel10k
+
+# OMZ Snippets (Getting OMZ features without the OMZ bloat)
+zinit snippet OMZP::git
+zinit snippet OMZP::sudo
+# zinit snippet OMZP::command-not-found
+zinit snippet OMZP::kubectl
+zinit snippet OMZP::aws
+
+# Core Zsh Plugins
+zinit light zsh-users/zsh-completions
+zinit light Aloxaf/fzf-tab
+
+# Vi Mode Plugin
+ZVM_VI_INSERT_ESCAPE_BINDKEY=jj # Map 'jj' to escape
+ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BLINKING_BEAM
+ZVM_NORMAL_MODE_CURSOR=$ZVM_CURSOR_BLINKING_BLOCK
+ZVM_OPPEND_MODE_CURSOR=$ZVM_CURSOR_BLINKING_UNDERLINE
+zinit light jeffreytse/zsh-vi-mode
+
+# Autosuggestions and Syntax Highlighting MUST be loaded last
+zinit light zsh-users/zsh-autosuggestions
+zinit light zsh-users/zsh-syntax-highlighting
+
+# ======================================
+# ZSH OPTIONS & HISTORY
+# =====================================
+setopt autocd              # change directory just by typing its name
+# setopt correct             # auto correct mistakes
+setopt interactivecomments # allow comments in interactive mode
+setopt promptsubst         # enable command substitution in prompt
+setopt appendhistory sharehistory extendedhistory
+setopt hist_ignore_space hist_ignore_all_dups hist_save_no_dups hist_find_no_dups
+
+HISTSIZE=50000
+SAVEHIST=50000
+HISTFILE=~/.zsh_history
+export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=10'
+
+# =====================================
+# COMPLETIONS & FZF-TAB
+# ====================================
+autoload -Uz compinit bashcompinit
+compinit && bashcompinit
+
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' menu no
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath || ls --color $realpath'
+zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza -1 --color=always $realpath || ls --color $realpath'
+
+# ==================================
+# FZF & TOOL INITIALIZATION
+# =================================
+if command -v fzf &> /dev/null; then
+    export FZF_DEFAULT_OPTS="--height 85% --layout=reverse --border=rounded \
+      --preview 'bat --style=numbers --color=always --line-range :500 {} 2>/dev/null || cat {}' \
+      --info=inline-right --ansi \
+      --color=border:#27a1b9,fg:#c0caf5,gutter:#16161e,header:#ff9e64 \
+      --color=hl+:#2ac3de,hl:#2ac3de,info:#545c7e,marker:#ff007c \
+      --color=pointer:#ff007c,prompt:#2ac3de,query:#c0caf5:regular \
+      --color=scrollbar:#27a1b9,separator:#ff9e64,spinner:#ff007c"
+    eval "$(fzf --zsh)"
+fi
+
+command -v zoxide &> /dev/null && eval "$(zoxide init zsh)"
+command -v thefuck &> /dev/null && eval "$(thefuck --alias)"
+
+# Docker Desktop completions
+# [[ -f ~/.docker/init-zsh.sh ]] && source ~/.docker/init-zsh.sh
+
+# ==========================
+# ALIASES & FUNCTIONS
+# =========================
+# General
+alias e="exit"
+alias v="nvim"
+alias t="tmux"
+alias cl='clear'
+alias cat='bat'
+alias http="xh"
+alias fmt="uv run ruff format"
+alias urp="uv run python -m"
+
+# Dirs & Navigation
+alias cd="z"
+alias cdl="zi"
+alias ..="cd .."
+alias ...="cd ../.."
+
+alias lsa="ls -all"
+alias ls="eza --icons --git"
+alias ll="eza -l -a --icons --git"
+alias lst="eza -l -a -T --level=2 --icons --git" # Tree view
+alias lsa="ls -all"
+
+# Git
+alias gc="git commit -m"
+alias gca="git commit -a -m"
+alias gp="git push origin HEAD"
+alias gpu="git pull origin"
+alias gst="git status"
+alias glog="git log --graph --topo-order --pretty='%w(100,0,6)%C(yellow)%h%C(bold)%C(black)%d %C(cyan)%ar %C(green)%an%n%C(bold)%C(white)%s %N' --abbrev-commit"
+alias gcoall='git checkout -- .'
+
+# Docker
+alias docker=podman
+alias dcu="docker compose up -d"
+alias dcd="docker compose down"
+alias dps="docker ps"
+alias dx="docker exec -it"
+
+# Kubernetes
+alias k="kubectl"
+alias kg="kubectl get"
+alias kd="kubectl describe"
+alias kdel="kubectl delete"
+alias kl="kubectl logs -f"
+alias kc="kubectx"
+alias kns="kubens"
+alias ke="kubectl exec -it"
+
+# Security Tools
+alias gobust='gobuster dir --wordlist ~/security/wordlists/diccnoext.txt --wildcard --url'
+alias fuzz='ffuf -w ~/hacking/SecLists/content_discovery_all.txt -mc all -u'
+
+# FZF File Search Shortcuts
+alias f="fzf | xargs -r nvim"
+alias fcd='cd "$(find . -type d | fzf --preview "eza -la {} || ls -la {}")"'
+
+# Ranger Wrapper
+function rr {
+    local IFS=$'\t\n'
+    local tempfile="$(mktemp -t tmp.XXXXXX)"
+    command ranger --cmd="map Q chain shell echo %d > \"$tempfile\"; quitall" "$@"
+    if [[ -f "$tempfile" ]] && [[ "$(cat -- "$tempfile")" != "$(echo -n `pwd`)" ]]; then
+        cd -- "$(cat "$tempfile")" || return
+    fi
+    command rm -f -- "$tempfile" 2>/dev/null
+}
+
+
+# =========================
+#  Bash SSH-Agent Manager
+# =========================
+SSH_ENV="$HOME/.ssh/agent-environment"
+
+function start_agent {
+    /usr/bin/ssh-agent | sed 's/^echo/#echo/' > "${SSH_ENV}"
+    chmod 600 "${SSH_ENV}"
+    . "${SSH_ENV}" > /dev/null
+    /usr/bin/ssh-add
+}
+
+if [ -f "${SSH_ENV}" ]; then
+    . "${SSH_ENV}" > /dev/null
+    # Test if the agent is still running
+    kill -0 $SSH_AGENT_PID 2>/dev/null || start_agent
+else
+    start_agent
+fi
+
+# =========================
+# FINAL THEME RENDER
+# ========================
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
