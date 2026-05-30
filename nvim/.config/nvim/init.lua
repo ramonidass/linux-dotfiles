@@ -918,7 +918,7 @@ require('lazy').setup({
   require 'custom.plugins.devicons',
   require 'custom.plugins.parinfer',
   require 'custom.plugins.snacks',
-  require 'custom.plugins.smear-cursor',
+  -- require 'custom.plugins.smear-cursor',
   require 'custom.plugins.fzf',
   require 'custom.plugins.render-markdown',
   -- require 'custom.plugins.neoscroll',
