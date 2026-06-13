@@ -1,55 +1,71 @@
-
-if command -v fastfetch &> /dev/null && [[ $- == *i* ]]; then
-    alias fastfetch='clear && command fastfetch'
-    command fastfetch
-fi
-
-# ==================================================
-# P10K INSTANT PROMPT
-# ==================================================
+# ==============================================================================
+# P10K INSTANT PROMPT (Must stay at the top of the file)
+# ==============================================================================
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-sed -i 's/typeset -g POWERLEVEL9K_INSTANT_PROMPT=.*/typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet/g' ~/.p10k.zsh
-
-
-# =================================================
-# ENVIRONMENT VARIABLES & PATHS
-# ================================================
-export EDITOR=nvim
-export VISUAL=nvim
-export SUDO_EDITOR=nvim
+# ==============================================================================
+# SYSTEM ENVIRONMENT & PATHS (Cross-Platform)
+# ==============================================================================
+export EDITOR="nvim"
+export VISUAL="nvim"
+export SUDO_EDITOR="nvim"
 export GOPATH="$HOME/go"
 export XDG_CONFIG_HOME="$HOME/.config"
-# To export agent socket to other GUI apps
-export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
 
-# Homebrew Initialization (Handles both Apple Silicon and Intel Macs safely)
-# if [[ -x "/opt/homebrew/bin/brew" ]]; then
-#     eval "$(/opt/homebrew/bin/brew shellenv)"
-# elif [[ -x "/usr/local/bin/brew" ]]; then
-#     eval "$(/usr/local/bin/brew shellenv)"
-# fi
+# OS Detection
+# case "$(uname -s)" in
+#     Darwin)
+#         # MacOS Homebrew paths (Apple Silicon vs Intel)
+#         if [[ -f /opt/homebrew/bin/brew ]]; then
+#             eval "$(/opt/homebrew/bin/brew shellenv)"
+#         elif [[ -f /usr/local/bin/brew ]]; then
+#             eval "$(/usr/local/bin/brew shellenv)"
+#         fi
+#         ;;
+#     Linux)
+#         # Linux Homebrew path
+#         if [[ -f /home/linuxbrew/.linuxbrew/bin/brew ]]; then
+#             eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+#         fi
+#         # SSH Socket Agent for Linux GUIs
+#         export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+#         ;;
+# esac
 
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$GOPATH/bin:$PATH"
+# Build unified PATH safely to avoid duplicates reloading
+typeset -U path
+path=(
+    $HOME/.local/bin
+    $HOME/.cargo/bin
+    $GOPATH/bin
+    $HOME/.config/bin
+    /opt/homebrew/opt/libpq/bin
+    $path
+)
+export PATH
 
-export CPATH="/opt/homebrew/opt/libpq/include:$CPATH"
-export LIBRARY_PATH="/opt/homebrew/opt/libpq/lib:$LIBRARY_PATH"
-export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+# Database flags for compilers
+if [[ -d "/opt/homebrew/opt/libpq" ]]; then
+    export CPATH="/opt/homebrew/opt/libpq/include:$CPATH"
+    export LIBRARY_PATH="/opt/homebrew/opt/libpq/lib:$LIBRARY_PATH"
+fi
 
-if command -v bat &> /dev/null; then export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+# Set default pager to bat if available
+if command -v bat &> /dev/null; then
+    export MANPAGER="sh -c 'col -bx | bat -l man -p'"
     export PAGER=bat
 fi
 
-# Load Secrets securely
-if [[ -f ~/.secrets.zsh ]]; then
-    source ~/.secrets.zsh
+# Load Secrets securely from external file
+if [[ -f "$HOME/.secrets.zsh" ]]; then
+    source "$HOME/.secrets.zsh"
 fi
 
-# =================================
-# ZINIT PLUGIN MANAGER
-# ================================
+# ==============================================================================
+# ZINIT PLUGIN MANAGER INITIALIZATION
+# ==============================================================================
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 if [ ! -d "$ZINIT_HOME" ]; then
    mkdir -p "$(dirname $ZINIT_HOME)"
@@ -60,58 +76,68 @@ source "${ZINIT_HOME}/zinit.zsh"
 # Theme
 zinit ice depth=1; zinit light romkatv/powerlevel10k
 
-# OMZ Snippets (Getting OMZ features without the OMZ bloat)
+# OMZ Snippets to leverage OMZ libraries without overhead
 zinit snippet OMZP::git
 zinit snippet OMZP::sudo
-# zinit snippet OMZP::command-not-found
 zinit snippet OMZP::kubectl
 zinit snippet OMZP::aws
 
-# Core Zsh Plugins
+# Core Plugins
 zinit light zsh-users/zsh-completions
 zinit light Aloxaf/fzf-tab
 
-# Vi Mode Plugin
-ZVM_VI_INSERT_ESCAPE_BINDKEY=jj # Map 'jj' to escape
+# Vi Mode Configuration & Plugin
+ZVM_VI_INSERT_ESCAPE_BINDKEY=jj
 ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BLINKING_BEAM
 ZVM_NORMAL_MODE_CURSOR=$ZVM_CURSOR_BLINKING_BLOCK
-ZVM_OPPEND_MODE_CURSOR=$ZVM_CURSOR_BLINKING_UNDERLINE
 zinit light jeffreytse/zsh-vi-mode
 
-# Autosuggestions and Syntax Highlighting MUST be loaded last
+# Syntax & Autosuggestions (Must be loaded at the very end of plugins)
 zinit light zsh-users/zsh-autosuggestions
 zinit light zsh-users/zsh-syntax-highlighting
 
-# ======================================
-# ZSH OPTIONS & HISTORY
-# =====================================
-setopt autocd              # change directory just by typing its name
-# setopt correct             # auto correct mistakes
-setopt interactivecomments # allow comments in interactive mode
-setopt promptsubst         # enable command substitution in prompt
-setopt appendhistory sharehistory extendedhistory
-setopt hist_ignore_space hist_ignore_all_dups hist_save_no_dups hist_find_no_dups
+# ==============================================================================
+# ZSH OPTIONS & HISTORY CONFIGURATION
+# ==============================================================================
+setopt autocd              # Change directory just by typing its name
+setopt interactivecomments # Allow comments in interactive shell lines
+setopt promptsubst         # Enable command substitution in prompt
+setopt appendhistory
+setopt sharehistory
+setopt extendedhistory
+setopt hist_ignore_space
+setopt hist_ignore_all_dups
+setopt hist_save_no_dups
+setopt hist_find_no_dups
 
 HISTSIZE=50000
 SAVEHIST=50000
 HISTFILE=~/.zsh_history
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=10'
 
-# =====================================
-# COMPLETIONS & FZF-TAB
-# ====================================
+# ==============================================================================
+# COMPLETIONS & INTERACTIVE FZF-TAB SETUP
+# ==============================================================================
 autoload -Uz compinit bashcompinit
 compinit && bashcompinit
 
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*' menu no
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath || ls --color $realpath'
-zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza -1 --color=always $realpath || ls --color $realpath'
 
-# ==================================
-# FZF & TOOL INITIALIZATION
-# =================================
+# Check whether eza or standard ls should render inside fzf-tab previews
+if command -v eza &> /dev/null; then
+    zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath || ls -la $realpath'
+    zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza -1 --color=always $realpath || ls -la $realpath'
+else
+    zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls -la $realpath'
+    zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'ls -la $realpath'
+fi
+
+# ==============================================================================
+# TOOL INITIALIZATIONS
+# ==============================================================================
+# FZF Config
 if command -v fzf &> /dev/null; then
     export FZF_DEFAULT_OPTS="--height 85% --layout=reverse --border=rounded \
       --preview 'bat --style=numbers --color=always --line-range :500 {} 2>/dev/null || cat {}' \
@@ -123,16 +149,32 @@ if command -v fzf &> /dev/null; then
     eval "$(fzf --zsh)"
 fi
 
+# Zoxide (Smart directory jumping)
 command -v zoxide &> /dev/null && eval "$(zoxide init zsh)"
-command -v thefuck &> /dev/null && eval "$(thefuck --alias)"
 
-# Docker Desktop completions
-# [[ -f ~/.docker/init-zsh.sh ]] && source ~/.docker/init-zsh.sh
+# Direnv (Dynamic ENV loading)
+command -v direnv &> /dev/null && eval "$(direnv hook zsh)" && export DIRENV_LOG_FORMAT=""
 
-# ==========================
+# Fastfetch (Welcome banner) - deferred to first precmd to avoid p10k warning
+if command -v fastfetch &> /dev/null; then
+    alias fastfetch='clear && command fastfetch'
+    autoload -Uz add-zsh-hook
+    function _fastfetch_once() {
+        command fastfetch
+        add-zsh-hook -d precmd _fastfetch_once
+    }
+    add-zsh-hook precmd _fastfetch_once
+fi
+
+# Docker Desktop (MacOS setup only)
+if [[ -f "$HOME/.docker/init-zsh.sh" ]]; then
+    source "$HOME/.docker/init-zsh.sh"
+fi
+
+# ==============================================================================
 # ALIASES & FUNCTIONS
-# =========================
-# General
+# ==============================================================================
+# Navigation / General
 alias e="exit"
 alias v="nvim"
 alias t="tmux"
@@ -141,18 +183,21 @@ alias cat='bat'
 alias http="xh"
 alias fmt="uv run ruff format"
 alias urp="uv run python -m"
-
-# Dirs & Navigation
-alias cd="z"
-alias cdl="zi"
+alias todo="basilk"
 alias ..="cd .."
 alias ...="cd ../.."
+alias ....="cd ../../.."
 
-alias lsa="ls -all"
-alias ls="eza --icons --git"
-alias ll="eza -l -a --icons --git"
-alias lst="eza -l -a -T --level=2 --icons --git" # Tree view
-alias lsa="ls -all"
+# Intelligent Directory Listing (falls back if eza is missing)
+if command -v eza &> /dev/null; then
+    alias ls="eza --icons --git"
+    alias ll="eza -lh -a --icons --git"
+    alias lst="eza -lh -a -T --level=2 --icons --git"
+else
+    alias ls="ls -G"
+    alias ll="ls -laG"
+    alias lst="tree -L 2"
+fi
 
 # Git
 alias gc="git commit -m"
@@ -160,74 +205,95 @@ alias gca="git commit -a -m"
 alias gp="git push origin HEAD"
 alias gpu="git pull origin"
 alias gst="git status"
-alias glog="git log --graph --topo-order --pretty='%w(100,0,6)%C(yellow)%h%C(bold)%C(black)%d %C(cyan)%ar %C(green)%an%n%C(bold)%C(white)%s %N' --abbrev-commit"
+alias gco="git checkout"
+alias gb='git branch'
+alias gba='git branch -a'
+alias gadd='git add'
+alias ga='git add -p'
 alias gcoall='git checkout -- .'
+alias gr='git remote'
+alias gre='git reset'
+alias glog="git log --graph --topo-order --pretty='%w(100,0,6)%C(yellow)%h%C(bold)%C(black)%d %C(cyan)%ar %C(green)%an%n%C(bold)%C(white)%s %N' --abbrev-commit"
 
-# Docker
-alias docker=podman
+# Containerization (Uses Docker if present, aliases to Podman on systems that have it)
+if command -v podman &> /dev/null && ! command -v docker &> /dev/null; then
+    alias docker=podman
+fi
 alias dcu="docker compose up -d"
 alias dcd="docker compose down"
 alias dps="docker ps"
+alias dpa="docker ps -a"
 alias dx="docker exec -it"
+
+# Penetration Testing & Security
+alias gobust='gobuster dir --wordlist ~/security/wordlists/diccnoext.txt --wildcard --url'
+alias fuzz='ffuf -w ~/hacking/SecLists/content_discovery_all.txt -mc all -u'
 
 # Kubernetes
 alias k="kubectl"
+alias ka="kubectl apply -f"
 alias kg="kubectl get"
 alias kd="kubectl describe"
 alias kdel="kubectl delete"
 alias kl="kubectl logs -f"
+alias kgpo="kubectl get pod"
+alias kgd="kubectl get deployments"
 alias kc="kubectx"
 alias kns="kubens"
 alias ke="kubectl exec -it"
+alias kcns='kubectl config set-context --current --namespace'
 
-# Security Tools
-alias gobust='gobuster dir --wordlist ~/security/wordlists/diccnoext.txt --wildcard --url'
-alias fuzz='ffuf -w ~/hacking/SecLists/content_discovery_all.txt -mc all -u'
-
-# FZF File Search Shortcuts
+# FZF Search Helpers
 alias f="fzf | xargs -r nvim"
 alias fcd='cd "$(find . -type d | fzf --preview "eza -la {} || ls -la {}")"'
 
-# Ranger Wrapper
+# Ranger State Wrapper (Dynamic platform temp directory resolution)
 function rr {
     local IFS=$'\t\n'
-    local tempfile="$(mktemp -t tmp.XXXXXX)"
+    local tempfile
+    tempfile="$(mktemp -t tmp.XXXXXX || mktemp)"
     command ranger --cmd="map Q chain shell echo %d > \"$tempfile\"; quitall" "$@"
-    if [[ -f "$tempfile" ]] && [[ "$(cat -- "$tempfile")" != "$(echo -n `pwd`)" ]]; then
+    if [[ -f "$tempfile" ]] && [[ "$(cat -- "$tempfile")" != "$PWD" ]]; then
         cd -- "$(cat "$tempfile")" || return
     fi
     command rm -f -- "$tempfile" 2>/dev/null
 }
 
+# ==============================================================================
+# BACKGROUND SERVICES (SSH Agent)
+#
+# Terminal
+#  │
+#  └───> Zsh runs your function: "start_agent"
+#            │
+#            └───> This starts the background daemon: "ssh-agent"
+#                             (The daemon is now running, waiting silently)
 
-# =========================
-#  Bash SSH-Agent Manager
-# =========================
+#  ssh-add -t 2h
+#              │
+#              └───> "ssh-add" reads your key (~/.ssh/id_ed25519)
+#              └───> It uploads the unlocked key into the running ssh-agent daemon for 2h
+# ==============================================================================
 SSH_ENV="$HOME/.ssh/agent-environment"
 
 function start_agent {
     /usr/bin/ssh-agent | sed 's/^echo/#echo/' > "${SSH_ENV}"
     chmod 600 "${SSH_ENV}"
-    . "${SSH_ENV}" > /dev/null
-    /usr/bin/ssh-add
+    source "${SSH_ENV}" > /dev/null
+    # No automatic ssh-add here. Secure on-demand approach.
 }
 
-if [ -f "${SSH_ENV}" ]; then
-    . "${SSH_ENV}" > /dev/null
+if [[ -f "${SSH_ENV}" ]]; then
+    source "${SSH_ENV}" > /dev/null
     # Test if the agent is still running
-    kill -0 $SSH_AGENT_PID 2>/dev/null || start_agent
+    kill -0 "$SSH_AGENT_PID" 2>/dev/null || start_agent
 else
     start_agent
 fi
 
-# =========================
-# direnv
-# ========================
-eval "$(direnv hook zsh)"
-export DIRENV_LOG_FORMAT=""
+alias ssh-add="ssh-add -t 2h"
 
-# =========================
-# FINAL THEME RENDER
-# ========================
+# ==============================================================================
+# RENDER POWERLEVEL10K (Must stay at the bottom of the file)
+# ==============================================================================
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
