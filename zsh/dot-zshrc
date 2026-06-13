@@ -44,6 +44,9 @@ path=(
     /opt/homebrew/opt/libpq/bin
     $path
 )
+# Filters out non-existent directories on the fly.
+# (N/) is a Zsh glob qualifier where 'N' enables NULL_GLOB and '/' filters for directories.
+path=($^path(N/))
 export PATH
 
 # Database flags for compilers
@@ -119,7 +122,14 @@ export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=10'
 # COMPLETIONS & INTERACTIVE FZF-TAB SETUP
 # ==============================================================================
 autoload -Uz compinit bashcompinit
-compinit && bashcompinit
+# Checks if .zcompdump was modified within the last 24 hours (m-1).
+# If yes, skips time-consuming directory scans and loads the cache instantly via compinit -C.
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.m-1) ]]; then
+    compinit -C
+else
+    compinit
+fi
+bashcompinit
 
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
@@ -188,7 +198,7 @@ alias ..="cd .."
 alias ...="cd ../.."
 alias ....="cd ../../.."
 
-# Intelligent Directory Listing (falls back if eza is missing)
+# Directory Listing (falls back if eza is missing)
 if command -v eza &> /dev/null; then
     alias ls="eza --icons --git"
     alias ll="eza -lh -a --icons --git"
@@ -246,7 +256,9 @@ alias ke="kubectl exec -it"
 alias kcns='kubectl config set-context --current --namespace'
 
 # FZF Search Helpers
-alias f="fzf | xargs -r nvim"
+# Replaced 'xargs -r' with standard shell checking.
+# This prevents macOS from crashing on command execution, as BSD xargs does not support the -r flag.
+alias f='file=$(fzf) && [[ -n "$file" ]] && nvim "$file"'
 alias fcd='cd "$(find . -type d | fzf --preview "eza -la {} || ls -la {}")"'
 
 # Ranger State Wrapper (Dynamic platform temp directory resolution)
@@ -271,6 +283,7 @@ function rr {
 #            └───> This starts the background daemon: "ssh-agent"
 #                             (The daemon is now running, waiting silently)
 
+
 #  ssh-add -t 2h
 #              │
 #              └───> "ssh-add" reads your key (~/.ssh/id_ed25519)
@@ -287,14 +300,14 @@ function start_agent {
 
 if [[ -f "${SSH_ENV}" ]]; then
     source "${SSH_ENV}" > /dev/null
-    # Test if the agent is still running
-    kill -0 "$SSH_AGENT_PID" 2>/dev/null || start_agent
+    if [[ ! -S "$SSH_AUTH_SOCK" ]] || ! kill -0 "$SSH_AGENT_PID" 2>/dev/null; then
+        start_agent
+    fi
 else
     start_agent
 fi
 
 alias ssh-add="ssh-add -t 2h"
-
 # ==============================================================================
 # RENDER POWERLEVEL10K (Must stay at the bottom of the file)
 # ==============================================================================
