@@ -200,6 +200,8 @@ else
 fi
 
 # Git
+alias or="open-repo.sh"
+alias gi="git-init.sh"
 alias gc="git commit -m"
 alias gca="git commit -a -m"
 alias gp="git push origin HEAD"
