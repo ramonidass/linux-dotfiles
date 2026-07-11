@@ -132,58 +132,6 @@ case "$theme" in
         vscodeTheme="Tokyo Storm Gogh"
         kvTheme="TokyoNight"
         ;;
-    Nord)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="Nordic-Darker"
-        ;;
-    Kanagawa)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    MatteBlack)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    Ethereal)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    Hackerman)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    Lumon)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    Miasma)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    OsakaJade)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    Retro82)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    Ristretto)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    Vantablack)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    LastHorizon)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
-    Solitude)
-        vscodeTheme="Default Dark Modern"
-        kvTheme="KvArcDark"
-        ;;
     *)
         echo "Warning: Unknown theme selected. No changes applied."
         exit 1
