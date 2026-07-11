@@ -1,165 +1,53 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Waybar helper (Fedora/dnf).
+#   --check   -> prints waybar JSON with the pending-update count
+#   --update  -> runs pkgupdate.sh in a terminal, notifies on real result
 
-SOUND_FILE_UPDATE="$HOME/.config/hypr/sounds/update.wav"
-SOUND_FILE_ERROR="$HOME/.config/hypr/sounds/error.wav"
-update_sign="$HOME/.config/hypr/icons/update.png"
-done_sign="$HOME/.config/hypr/icons/done.png"
-warning_sign="$HOME/.config/hypr/icons/warning.png"
-error_sign="$HOME/.config/hypr/icons/error.png"
-upd_script="$HOME/.config/hypr/scripts/pkgupdate.sh"
-
-# notification functions
-update_notification() {
-    notify-send -i "$1" "$2" "$3"
-    paplay "$SOUND_FILE_UPDATE"
-}
-
-error_notification() {
-    notify-send -i "$1" "$2" "$3"
-    paplay "$SOUND_FILE_ERROR"
-}
+set -uo pipefail
 
 scripts_dir="$HOME/.config/hypr/scripts"
+upd_script="$scripts_dir/pkgupdate.sh"
+done_sign="$HOME/.config/hypr/icons/done.png"
+error_sign="$HOME/.config/hypr/icons/error.png"
+SOUND_UPDATE="$HOME/.config/hypr/sounds/update.wav"
+SOUND_ERROR="$HOME/.config/hypr/sounds/error.wav"
 
-# function to check the package manager
-check_update() {
-    if [ -n "$(command -v pacman)" ]; then
-        # Function to check for updates
-        aurhlpr=$(command -v yay || command -v paru)
-
-        check_for_updates() {
-            aur=$(${aurhlpr} -Qua | wc -l)
-            ofc=$(checkupdates | wc -l)
-
-            # Calculate total available updates
-            upd=$(( ofc + aur ))
-
-            echo "$upd"
-        }
-
-        # tooltip in waybar
-        aur=$(${aurhlpr} -Qua | wc -l)
-        ofc=$(checkupdates | wc -l)
-
-        # Initial check for updates
-        upd=$(check_for_updates)
-
-        # Show tooltip
-        if [ $upd -eq 0 ] ; then
-            echo "{\"text\":\"$upd\", \"tooltip\":\"  Packages are up to date\"}"
-        else
-            echo "{\"text\":\"$upd\", \"tooltip\":\"󱓽 Official $ofc\n󱓾 AUR $aur\n\nPress CTRL + U to update\"}"
-            # update_notification "$update_sign" "Updates Available: $upd" "Main: $ofc\nAur: $aur"
-        fi
-
-    elif [ -n "$(command -v dnf)" ]; then
-        # Calculate total available updates fedora
-        upd=$(dnf check-update -q | grep -vE 'Last metadata expiration|^$' | wc -l)
-
-        # Show tooltip
-        if [ $upd -eq 0 ] ; then
-            echo "{\"text\":\"$upd\", \"tooltip\":\"  Packages are up to date\"}"
-        else
-            echo "{\"text\":\"$upd\", \"tooltip\":\"󱓽 Updates Available: $upd\n\npress ctrl + u to update\"}"
-            # update_notification "$update_sign" "Updates Available" "$upd packages"
-        fi
-
-    elif [ -n "$(command -v zypper)" ]; then
-        # count the number of available updates
-        ofc=$(zypper lu --best-effort | grep -c 'v  |')
-
-        # Calculate total available updates
-        upd=$(( ofc ))
-
-        # Show tooltip
-        if [ $upd -eq 0 ] ; then
-            echo "{\"text\":\"$upd\", \"tooltip\":\"  Packages are up to date\"}"
-        else
-            echo "{\"text\":\"$upd\", \"tooltip\":\"󱓽 Updates Available: $upd\n\nPress CTRL + U to update\"}"
-            # update_notification "$update_sign" "Updates Available" "$upd packages"
-        fi
-    fi
+notify() {  # icon summary body sound
+    notify-send -i "$1" "$2" "$3"
+    [ -f "$4" ] && command -v paplay >/dev/null && paplay "$4" &
 }
 
-package_update() {
-    if [ -n "$(command -v pacman)" ]; then
-        aurhlpr=$(command -v yay || command -v paru)
-        
-        kitty --title update sh -c "${upd_script}"
-        check_for_updates() {
-            aur=$(${aurhlpr} -Qua | wc -l)
-            ofc=$(checkupdates | wc -l)
-
-            # Calculate total available updates
-            upd=$(( ofc + aur ))
-
-            echo "$upd"
-        }
-
-        # tooltip in waybar
-        aur=$(${aurhlpr} -Qua | wc -l)
-        ofc=$(checkupdates | wc -l)
-
-        # Initial check for updates
-        upd=$(check_for_updates)
-
-        sleep 1
-
-        if [ $upd -eq 0 ]; then
-            update_notification "$done_sign" "Done" "Packages have been updated"
-        elif [ $upd -gt 0 ]; then
-            error_notification "$warning_sign" "Warning!" "Some packages may have skipped"
-        else
-            error_notification "$error_sign" "Error!" "Sorry, could not update packages"
-        fi
-    elif [ -n "$(command -v dnf)" ]; then
-        # Run the update command and capture the return code
-        kitty --title update sh -c "${upd_script}"
-        
-        # Calculate total available updates fedora
-        upd=$(dnf check-update -q | grep -vE 'Last metadata expiration|^$' | wc -l)
-
-        sleep 1
-
-        if [ $upd -eq 0 ]; then
-            update_notification "$done_sign" "Done" "Packages have been updated"
-        elif [ $upd -gt 0 ]; then
-            error_notification "$warning_sign" "Warning!" "Some packages may have skipped"
-        else
-            error_notification "$error_sign" "Error!" "Sorry, could not update packages"
-        fi
-
-    elif [ -n "$(command -v zypper)" ]; then
-        kitty --title update sh -c "${upd_script}"
-
-        # count the number of available updates
-        ofc=$(zypper lu --best-effort | grep -c 'v  |')
-
-        # Calculate total available updates
-        upd=$(( ofc ))
-
-        sleep 1
-
-        if [ $upd -eq 0 ]; then
-            update_notification "$done_sign" "Done" "Packages have been updated"
-        elif [ $upd -gt 0 ]; then
-            error_notification "$warning_sign" "Warning!" "Some packages may have skipped"
-        else
-            error_notification "$error_sign" "Error!" "Sorry, could not update packages"
-        fi
-    fi
-
-    "$scripts_dir/waybar-reload.sh" --reload
+# dnf check-update exits 100 when updates exist, 0 when none. Count only real
+# "name.arch  version  repo" rows, skipping section headers/blank lines.
+count_updates() {
+    local dnf_count fp_count=0
+    dnf_count=$(dnf -q check-update 2>/dev/null \
+        | awk 'NF>=3 && $1 !~ /^(Obsoleting|Last|Security)/ {c++} END{print c+0}')
+    command -v flatpak >/dev/null && \
+        fp_count=$(flatpak remote-ls --updates 2>/dev/null | grep -c . || true)
+    echo $(( dnf_count + fp_count ))
 }
 
-case $1 in
+case "${1:-}" in
     --check)
-        check_update  # Check for available updates
+        upd=$(count_updates)
+        if [ "$upd" -eq 0 ]; then
+            printf '{"text":"%s","tooltip":"  System is up to date"}\n' "$upd"
+        else
+            printf '{"text":"%s","tooltip":"󱓽 %s updates available\\n\\nPress CTRL + U to update"}\n' "$upd" "$upd"
+        fi
         ;;
     --update)
-        package_update  # Perform package update
+        rc_file=$(mktemp)
+        kitty --title "System Update" sh -c "$upd_script; echo \$? > '$rc_file'"
+        rc=$(cat "$rc_file" 2>/dev/null || echo 1); rm -f "$rc_file"
+        if [ "$rc" -eq 0 ]; then
+            notify "$done_sign" "System updated" "All packages up to date" "$SOUND_UPDATE"
+        else
+            notify "$error_sign" "Update failed" "dnf exited $rc — see terminal" "$SOUND_ERROR"
+        fi
+        "$scripts_dir/waybar-reload.sh" --reload 2>/dev/null || true
         ;;
     *)
-        echo "Invalid option. Use 'cu' to check for updates or 'up' to update packages."
-        ;;
+        echo "Usage: $(basename "$0") --check | --update" >&2; exit 2 ;;
 esac
