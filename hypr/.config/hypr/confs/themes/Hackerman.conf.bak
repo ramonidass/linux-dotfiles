@@ -1,5 +1,5 @@
-$activeCol = rgba(e68e0dFF)
-$inactiveCol = rgba(8a8a8dFF)
+$activeCol = rgba(82FB9CFF)
+$inactiveCol = rgba(6a6e95FF)
 $icon = Tela-circle-dracula
 $theme = Adwaita-dark
 $color = prefer-dark
@@ -31,10 +31,9 @@ decoration {
     shadow {
         enabled = true
         range = $shadow_range
-        render_power = 2
-        color = rgba(0d0d0dcc)
-        color_inactive = rgba(0d0d0d80)
-        offset = 0 3
+        render_power = 4
+        color = $activeCol
+        color_inactive = $inactiveCol
     }
 
     blur {

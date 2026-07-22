@@ -47,7 +47,13 @@ case $1 in
         ;;
 esac
 
-awww-daemon &
+# Ensure awww-daemon is alive (it can die after suspend, leaving a stale socket)
+if ! awww query &>/dev/null; then
+    pkill -x awww-daemon
+    rm -f "$XDG_RUNTIME_DIR/${WAYLAND_DISPLAY}-awww-daemon.sock"
+    awww-daemon &
+    until awww query &>/dev/null; do sleep 0.2; done
+fi
 
 # No choice case
 if [[ -z $choice ]]; then
